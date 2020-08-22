@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+/// Handed out by an `AssetStore` when a new asset is added.
 pub struct AssetId(u32);
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct FileId(u32);
 
 pub struct AssetStore {
     assets: HashMap<AssetId, Asset>,
@@ -17,11 +21,11 @@ impl AssetStore {
     }
 
     /// Creates a new asset and returns the id.
-    pub fn new_asset(&mut self, title: &str) -> AssetId {
+    pub fn new_asset(&mut self, title: &str, file: FileId) -> AssetId {
         let id = self.next_id;
         let new_asset = Asset {
-            id,
             title: title.into(),
+            file,
         };
 
         // Store the new asset.
@@ -39,19 +43,21 @@ impl AssetStore {
 }
 
 pub struct Asset {
-    id: AssetId,
     title: String,
+    file: FileId,
 }
 
 impl Asset {
-    pub fn id(&self) -> &AssetId {
-        &self.id
-    }
-
     pub fn title(&self) -> &String {
         &self.title
     }
+
+    pub fn file(&self) -> &FileId {
+        &self.file
+    }
 }
+
+trait IndexedStore {}
 
 #[cfg(test)]
 mod test {
@@ -61,10 +67,11 @@ mod test {
     #[test]
     fn new_assets_should_have_non_equal_ids() {
         let mut store = AssetStore::new();
+        let fid = FileId(0);
 
-        let id_1 = store.new_asset("Asset");
-        let id_2 = store.new_asset("Other asset");
-        let id_3 = store.new_asset("Yet another asset");
+        let id_1 = store.new_asset("Asset", fid);
+        let id_2 = store.new_asset("Other asset", fid);
+        let id_3 = store.new_asset("Yet another asset", fid);
 
         assert_ne!(id_1, id_2, "Assigned ids must be unique.");
         assert_ne!(id_2, id_3, "Assigned ids must be unique.");
@@ -75,12 +82,13 @@ mod test {
     #[test]
     fn adding_assets_increases_count() {
         let mut store = AssetStore::new();
+        let fid = FileId(0);
 
-        store.new_asset("test");
+        store.new_asset("test", fid);
         assert_eq!(store.count(), 1);
-        store.new_asset("other test");
+        store.new_asset("other test", fid);
         assert_eq!(store.count(), 2);
-        store.new_asset("test");
+        store.new_asset("test", fid);
         assert_eq!(store.count(), 3);
     }
 }
