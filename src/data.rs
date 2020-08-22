@@ -32,6 +32,10 @@ impl AssetStore {
 
         return id;
     }
+
+    pub fn count(&self) -> usize {
+        self.assets.len()
+    }
 }
 
 pub struct Asset {
@@ -60,7 +64,23 @@ mod test {
 
         let id_1 = store.new_asset("Asset");
         let id_2 = store.new_asset("Other asset");
+        let id_3 = store.new_asset("Yet another asset");
 
         assert_ne!(id_1, id_2, "Assigned ids must be unique.");
+        assert_ne!(id_2, id_3, "Assigned ids must be unique.");
+        assert_ne!(id_3, id_1, "Assigned ids must be unique.");
+    }
+
+    /// When adding assets, the asset count should go up.
+    #[test]
+    fn adding_assets_increases_count() {
+        let mut store = AssetStore::new();
+
+        store.new_asset("test");
+        assert_eq!(store.count(), 1);
+        store.new_asset("other test");
+        assert_eq!(store.count(), 2);
+        store.new_asset("test");
+        assert_eq!(store.count(), 3);
     }
 }
