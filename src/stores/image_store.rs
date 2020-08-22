@@ -51,7 +51,6 @@ impl ImageStore {
     pub fn path_has_image_extension(path: &Path) -> bool {
         match path.extension() {
             Some(ext) => {
-                println!("{:?}", ext);
                 if let Some(string) = ext.to_str() {
                     let lowercase = string.to_lowercase();
                     IMAGE_EXTENSIONS.contains(&lowercase.as_str())
@@ -93,6 +92,7 @@ impl Image {
 #[cfg(test)]
 mod test {
     use super::*;
+    use naughty_strings::BLNS;
 
     /// When inserting new images, the generated ids must be different.
     #[test]
@@ -151,5 +151,19 @@ mod test {
         let mut store = ImageStore::new();
 
         assert!(store.new_image(Path::new("image.PNG")).is_some());
+    }
+
+    #[test]
+    fn use_naughty_strings_as_paths() {
+        let mut store = ImageStore::new();
+
+        for string in BLNS {
+            let path = Path::new(string);
+            assert!(
+                store.new_image(path).is_none(),
+                "This string managed to pose as an image path: {}",
+                string
+            );
+        }
     }
 }
