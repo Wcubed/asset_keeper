@@ -1,5 +1,3 @@
-mod data;
+mod stores;
 
-fn main() {
-    let mut asset_store = data::AssetStore::new();
-}
+fn main() {}
