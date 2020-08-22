@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Wcubed/asset_keeper.svg?branch=master)](https://travis-ci.org/Wcubed/asset_keeper)
+
 An attempt at creating a program that allows for organizing,
 tagging and manipulating image assets.
 
