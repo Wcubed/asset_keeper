@@ -10,4 +10,7 @@ edition = "2018"
 
 
 [dev-dependencies]
+# A list of strings that are known to cause problems in code.
 naughty-strings = "0.2.3"
+# For doing filesystem interactions without messing with permanent files.
+tempfile = "*"
