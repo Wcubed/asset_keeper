@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::image_store::ImageId;
+use super::file_store::FileId;
 use super::traits::IndexedStore;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
@@ -21,11 +21,11 @@ impl AssetStore {
     }
 
     /// Creates a new asset and returns the id.
-    pub fn new_asset(&mut self, title: &str, image: ImageId) -> AssetId {
+    pub fn new_asset(&mut self, title: &str, image: FileId) -> AssetId {
         let id = self.next_id;
         let new_asset = Asset {
             title: title.into(),
-            image,
+            file: image,
         };
 
         // Store the new asset.
@@ -53,7 +53,7 @@ impl IndexedStore for AssetStore {
 
 pub struct Asset {
     title: String,
-    image: ImageId,
+    file: FileId,
 }
 
 impl Asset {
@@ -61,23 +61,25 @@ impl Asset {
         &self.title
     }
 
-    pub fn image(&self) -> &ImageId {
-        &self.image
+    pub fn file(&self) -> &FileId {
+        &self.file
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::stores::image_store::ImageStore;
+    use crate::stores::file_store::FileStore;
     use std::path::Path;
 
     /// When inserting new assets, the generated ids must be different.
     #[test]
     fn new_assets_should_have_different_ids() {
         let mut store = AssetStore::new();
-        let mut image_store = ImageStore::new();
-        let img_id = image_store.new_image(Path::new("Test.png")).unwrap();
+        let mut file_store = FileStore::new();
+        let img_id = file_store
+            .new_file_from_disk(Path::new("Test.png"))
+            .unwrap();
 
         let id_1 = store.new_asset("Asset", img_id);
         let id_2 = store.new_asset("Other asset", img_id);
@@ -92,8 +94,10 @@ mod test {
     #[test]
     fn adding_assets_increases_count() {
         let mut store = AssetStore::new();
-        let mut image_store = ImageStore::new();
-        let img_id = image_store.new_image(Path::new("Test.png")).unwrap();
+        let mut image_store = FileStore::new();
+        let img_id = image_store
+            .new_file_from_disk(Path::new("Test.png"))
+            .unwrap();
 
         store.new_asset("test", img_id);
         assert_eq!(store.count(), 1);
@@ -106,8 +110,10 @@ mod test {
     #[test]
     fn getting_assets_works() {
         let mut store = AssetStore::new();
-        let mut image_store = ImageStore::new();
-        let img_id = image_store.new_image(Path::new("Test.png")).unwrap();
+        let mut image_store = FileStore::new();
+        let img_id = image_store
+            .new_file_from_disk(Path::new("Test.png"))
+            .unwrap();
 
         let title = "Testing";
 
@@ -115,7 +121,7 @@ mod test {
         let asset = store.get(new_id).unwrap();
 
         assert_eq!(asset.title(), title);
-        assert_eq!(asset.image(), &img_id);
+        assert_eq!(asset.file(), &img_id);
 
         // Getting a non-existing asset must return None.
         assert!(store.get(AssetId(10)).is_none());
