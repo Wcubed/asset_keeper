@@ -3,17 +3,20 @@ use std::collections::HashMap;
 use super::traits::IndexedStore;
 use std::path::{Path, PathBuf};
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 /// Handed out by a `FileStore` when a new file is added.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct FileId(u32);
+
+impl FileId {
+    fn to_string(&self) -> String {
+        self.0.to_string()
+    }
+}
 
 pub struct FileStore {
     files: HashMap<FileId, File>,
     next_id: FileId,
 }
-
-/// Extensions that we know how to deal with.
-pub const KNOWN_EXTENSIONS: [&str; 1] = ["png"];
 
 impl FileStore {
     pub fn new() -> FileStore {
@@ -23,20 +26,17 @@ impl FileStore {
         }
     }
 
-    /// Creates a new reference to an file, and returns the id.
-    /// TODO: Will copy the given file to the applications file storage location.
-    /// Will return `None` if the path's extension is not in [`KNOWN_EXTENSIONS`](KNOWN_EXTENSIONS).
-    /// TODO: or if the file copy failed.
-    pub fn new_file_from_disk(&mut self, path: &Path) -> Option<FileId> {
-        if !FileStore::path_has_file_extension(path) {
-            // This is not an file path we recognize.
-            return None;
-        }
-
+    /// Creates a new reference to a file, and returns the FileId as well as the filename that
+    /// the file should be saved as.
+    /// The filename is not dependant on the file's title.
+    pub fn new_file(&mut self, title: &str, extension: KnownExtension) -> (FileId, PathBuf) {
         let id = self.next_id;
         let new_file = File {
-            path: PathBuf::from(path),
+            id,
+            title: title.to_string(),
+            extension,
         };
+        let file_name = new_file.file_name();
 
         // Store the new file.
         self.files.insert(id, new_file);
@@ -44,27 +44,7 @@ impl FileStore {
         // Update where we are at with the ids.
         self.next_id = FileId(id.0 + 1);
 
-        Some(id)
-    }
-
-    /// Does the path have an extension that we recognize as being an file?
-    /// This is true if the extension is in [`KNOWN_EXTENSIONS`](KNOWN_EXTENSIONS).
-    /// Does not care about capitalization.
-    pub fn path_has_file_extension(path: &Path) -> bool {
-        match path.extension() {
-            Some(ext) => {
-                if let Some(string) = ext.to_str() {
-                    let lowercase = string.to_lowercase();
-                    KNOWN_EXTENSIONS.contains(&lowercase.as_str())
-                } else {
-                    false
-                }
-            }
-            None => {
-                // Path does not have an extension.
-                false
-            }
-        }
+        (id, file_name)
     }
 }
 
@@ -82,90 +62,139 @@ impl IndexedStore for FileStore {
 }
 
 pub struct File {
-    path: PathBuf,
+    id: FileId,
+    title: String,
+    extension: KnownExtension,
 }
 
 impl File {
-    pub fn path(&self) -> &Path {
-        &self.path
+    pub fn title(&self) -> &str {
+        self.title.as_str()
+    }
+    pub fn extension(&self) -> &KnownExtension {
+        &self.extension
+    }
+    /// The file name is not dependant on the file's title.
+    pub fn file_name(&self) -> PathBuf {
+        PathBuf::new()
+            .with_file_name(self.id.to_string())
+            .with_extension(self.extension.to_str())
+    }
+}
+/// File extensions that we know how to deal with.
+#[derive(Eq, PartialEq, Debug)]
+pub enum KnownExtension {
+    Png,
+}
+
+impl KnownExtension {
+    /// Creates a KnownExtension from a given extension string (without the ".").
+    /// Returns None when we don't know how to deal with a given type of file.
+    pub fn from_str(string: &str) -> Option<KnownExtension> {
+        match string.to_ascii_lowercase().as_str() {
+            "png" => Some(Self::Png),
+            _ => None,
+        }
+    }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            Self::Png => "png",
+        }
     }
 }
 
 #[cfg(test)]
-mod test {
+mod test_file_store {
     use super::*;
-    use naughty_strings::BLNS;
 
     /// When inserting new files, the generated ids must be different.
     #[test]
-    fn new_files_should_have_different_ids() {
+    fn new_files_should_have_different_ids_and_paths() {
         let mut store = FileStore::new();
 
-        let id_1 = store.new_file_from_disk(Path::new("file.png")).unwrap();
-        let id_2 = store.new_file_from_disk(Path::new("other.png")).unwrap();
-        let id_3 = store.new_file_from_disk(Path::new("test.png")).unwrap();
+        let (id_1, path_1) = store.new_file("test file", KnownExtension::Png);
+        let (id_2, path_2) = store.new_file("SDKDKK@K@@", KnownExtension::Png);
+        let (id_3, path_3) = store.new_file("test {}", KnownExtension::Png);
 
         assert_ne!(id_1, id_2, "Assigned ids must be unique.");
         assert_ne!(id_2, id_3, "Assigned ids must be unique.");
         assert_ne!(id_3, id_1, "Assigned ids must be unique.");
+
+        assert_ne!(path_1, path_2, "Assigned paths must be unique.");
+        assert_ne!(path_2, path_3, "Assigned paths must be unique.");
+        assert_ne!(path_3, path_1, "Assigned paths must be unique.");
     }
 
     /// When adding files, the file count should go up.
     #[test]
     fn adding_files_increases_count() {
         let mut store = FileStore::new();
-        let path = Path::new("test.png");
 
-        store.new_file_from_disk(path);
+        store.new_file("!!!", KnownExtension::Png);
         assert_eq!(store.count(), 1);
-        store.new_file_from_disk(path);
+        store.new_file("BLAA!", KnownExtension::Png);
         assert_eq!(store.count(), 2);
-        store.new_file_from_disk(path);
+        store.new_file("meep!", KnownExtension::Png);
         assert_eq!(store.count(), 3);
     }
 
     #[test]
-    fn getting_files_works() {
+    fn getting_files_returns_correct_values() {
         let mut store = FileStore::new();
 
-        let path = Path::new("files/test.png");
-
-        let new_id = store.new_file_from_disk(path).unwrap();
+        let (new_id, new_name) = store.new_file("!@@#$@#@", KnownExtension::Png);
         let file = store.get(new_id).unwrap();
 
-        assert_eq!(file.path().as_os_str(), path.as_os_str());
+        // Retrieved file name must be the same as the one returned on creation.
+        assert_eq!(file.file_name(), new_name);
+        // The extension should match with what the KnownExtension returns as string.
+        assert_eq!(
+            file.file_name().extension().unwrap(),
+            KnownExtension::Png.to_str()
+        );
+
+        assert_eq!(file.extension, KnownExtension::Png);
 
         // Getting a non-existing file must return None.
         assert!(store.get(FileId(10)).is_none());
     }
+}
+
+#[cfg(test)]
+mod test_file_extensions {
+    use super::*;
+    use naughty_strings::BLNS;
 
     #[test]
-    fn unknown_file_extensions_should_be_rejected() {
-        let mut store = FileStore::new();
-
-        assert!(store.new_file_from_disk(Path::new("test.pdf")).is_none());
-        assert!(store.new_file_from_disk(Path::new("blaargh!")).is_none());
-        assert!(store
-            .new_file_from_disk(Path::new("file/test/bla.jpg"))
-            .is_none());
+    fn unknown_file_extensions_should_return_none() {
+        assert!(KnownExtension::from_str("pdf").is_none());
+        assert!(KnownExtension::from_str("xcf").is_none());
+        assert!(KnownExtension::from_str("jpg").is_none());
     }
 
     #[test]
     fn file_extensions_should_work_when_capitalized() {
-        let mut store = FileStore::new();
-
-        assert!(store.new_file_from_disk(Path::new("file.PNG")).is_some());
+        assert_eq!(
+            KnownExtension::from_str("PNG").unwrap(),
+            KnownExtension::Png
+        );
+        assert_eq!(
+            KnownExtension::from_str("pnG").unwrap(),
+            KnownExtension::Png
+        );
+        assert_eq!(
+            KnownExtension::from_str("PnG").unwrap(),
+            KnownExtension::Png
+        );
     }
 
     #[test]
-    fn use_naughty_strings_as_paths() {
-        let mut store = FileStore::new();
-
+    fn use_naughty_strings_as_extensions() {
         for string in BLNS {
-            let path = Path::new(string);
             assert!(
-                store.new_file_from_disk(path).is_none(),
-                "This string managed to pose as a known file path: {}",
+                KnownExtension::from_str(string).is_none(),
+                "This string managed to pose as a known file extension: {}",
                 string
             );
         }
