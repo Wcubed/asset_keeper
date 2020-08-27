@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use super::traits::IndexedStore;
+use crate::stores::traits::StoreId;
 use std::path::{Path, PathBuf};
 
 /// Handed out by a `FileStore` when a new file is added.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Hash, Debug, Copy, Clone)]
 pub struct FileId(u32);
 
 impl FileId {
@@ -12,6 +13,8 @@ impl FileId {
         self.0.to_string()
     }
 }
+
+impl StoreId for FileId {}
 
 pub struct FileStore {
     files: HashMap<FileId, File>,

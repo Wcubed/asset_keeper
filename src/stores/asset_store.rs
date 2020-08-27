@@ -2,10 +2,13 @@ use std::collections::HashMap;
 
 use super::file_store::FileId;
 use super::traits::IndexedStore;
+use crate::stores::traits::StoreId;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 /// Handed out by an `AssetStore` when a new asset is added.
+#[derive(Eq, PartialEq, Hash, Debug, Copy, Clone)]
 pub struct AssetId(u32);
+
+impl StoreId for AssetId {}
 
 pub struct AssetStore {
     assets: HashMap<AssetId, Asset>,
