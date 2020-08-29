@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::traits::IndexedStore;
 use crate::stores::traits::StoreId;
+use std::collections::hash_map::Iter;
 use std::path::{Path, PathBuf};
 
 /// Handed out by a `FileStore` when a new file is added.
@@ -62,6 +63,14 @@ impl IndexedStore for FileStore {
     fn count(&self) -> usize {
         self.files.len()
     }
+
+    fn remove(&mut self, id: &Self::Id) -> Option<Self::Item> {
+        self.files.remove(id)
+    }
+
+    fn iter(&self) -> Iter<Self::Id, Self::Item> {
+        self.files.iter()
+    }
 }
 
 pub struct File {
@@ -98,6 +107,12 @@ impl KnownExtension {
             "png" => Some(Self::Png),
             _ => None,
         }
+    }
+
+    /// Creates a KnownExtension from a given Path.
+    /// Returns None when we don't know how to deal with a given type of file.
+    pub fn from_path(path: &Path) -> Option<KnownExtension> {
+        Self::from_str(path.extension().unwrap_or_default().to_str().unwrap_or(""))
     }
 
     pub fn to_str(&self) -> &str {

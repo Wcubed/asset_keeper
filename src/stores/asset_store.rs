@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use super::file_store::FileId;
 use super::traits::IndexedStore;
 use crate::stores::traits::StoreId;
+use std::collections::hash_map::Iter;
 
 /// Handed out by an `AssetStore` when a new asset is added.
 #[derive(Eq, PartialEq, Hash, Debug, Copy, Clone)]
@@ -51,6 +52,14 @@ impl IndexedStore for AssetStore {
 
     fn count(&self) -> usize {
         self.assets.len()
+    }
+
+    fn remove(&mut self, id: &Self::Id) -> Option<Self::Item> {
+        self.assets.remove(id)
+    }
+
+    fn iter(&self) -> Iter<Self::Id, Self::Item> {
+        self.assets.iter()
     }
 }
 
