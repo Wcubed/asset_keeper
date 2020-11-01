@@ -1,5 +1,4 @@
-use crate::stores::asset_store::{Asset, AssetId, AssetStore};
-use crate::stores::file_store::{FileId, FileStore, KnownExtension};
+use crate::stores::file_store::{File, FileId, FileStore, KnownExtension};
 use crate::stores::traits::IndexedStore;
 use anyhow::{Context, Result};
 use std::collections::hash_map::Iter;
@@ -8,7 +7,6 @@ use std::path::{Path, PathBuf};
 pub struct Data {
     save_dir: PathBuf,
     files_dir: PathBuf,
-    assets: AssetStore,
     files: FileStore,
 }
 
@@ -34,15 +32,14 @@ impl Data {
         Ok(Data {
             save_dir: PathBuf::from(save_dir),
             files_dir: PathBuf::from(save_dir),
-            assets: AssetStore::new(),
             files: FileStore::new(),
         })
     }
 
-    /// Adds a new asset from disk. Copies the file over to the file directory.
+    /// Adds a new file from disk. Copies it over to the file directory.
     /// Will return an error if something goes wrong during copy,
     /// or if the file extension is not one we can deal with.
-    pub fn add_asset_from_disk(&mut self, title: &str, file: &Path) -> Result<AssetId> {
+    pub fn add_file_from_disk(&mut self, title: &str, file: &Path) -> Result<FileId> {
         let extension = KnownExtension::from_path(file).context("Extension is not known.")?;
         let (file_id, dest) = self.files.new_file(title, extension);
         let full_dest = self.files_dir.join(dest);
@@ -63,21 +60,19 @@ impl Data {
             }
         }
 
-        let asset_id = self.assets.new_asset(title, file_id);
-
-        Ok(asset_id)
+        Ok(file_id)
     }
 
-    pub fn asset_count(&self) -> usize {
-        self.assets.count()
+    pub fn file_count(&self) -> usize {
+        self.files.count()
     }
 
-    pub fn assets_iter(&self) -> Iter<AssetId, Asset> {
-        self.assets.iter()
+    pub fn file_iter(&self) -> Iter<FileId, File> {
+        self.files.iter()
     }
 
-    pub fn get_asset(&self, id: AssetId) -> Option<&Asset> {
-        self.assets.get(id)
+    pub fn get_file_info(&self, id: FileId) -> Option<&File> {
+        self.files.get(id)
     }
 }
 
@@ -117,11 +112,11 @@ mod test {
 
         let title = "Testing title";
 
-        let id = data.add_asset_from_disk(title, &test_files.join(Path::new("swords/tall.png")))?;
+        let id = data.add_file_from_disk(title, &test_files.join(Path::new("swords/tall.png")))?;
 
         // Check if it has been created properly.
-        assert_eq!(data.asset_count(), 1);
-        let asset = data.get_asset(id).unwrap();
+        assert_eq!(data.file_count(), 1);
+        let asset = data.get_file_info(id).unwrap();
         assert_eq!(asset.title(), title);
 
         // TODO: Check if the file can be retrieved as well.

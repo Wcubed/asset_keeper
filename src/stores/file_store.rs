@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::traits::IndexedStore;
 use crate::stores::traits::StoreId;
@@ -39,6 +39,7 @@ impl FileStore {
             id,
             title: title.to_string(),
             extension,
+            system_tags: HashSet::new(),
         };
         let file_name = new_file.file_name();
 
@@ -77,6 +78,7 @@ pub struct File {
     id: FileId,
     title: String,
     extension: KnownExtension,
+    system_tags: HashSet<SystemTag>,
 }
 
 impl File {
@@ -86,11 +88,16 @@ impl File {
     pub fn extension(&self) -> &KnownExtension {
         &self.extension
     }
+
     /// The file name is not dependant on the file's title.
     pub fn file_name(&self) -> PathBuf {
         PathBuf::new()
             .with_file_name(self.id.to_string())
             .with_extension(self.extension.to_str())
+    }
+
+    pub fn system_tags(&self) -> &HashSet<SystemTag> {
+        &self.system_tags
     }
 }
 /// File extensions that we know how to deal with.
@@ -120,6 +127,12 @@ impl KnownExtension {
             Self::Png => "png",
         }
     }
+}
+
+#[derive(Eq, PartialEq, Hash, Copy, Clone)]
+pub enum SystemTag {
+    /// Indicates an image that has some kind of transparency to it.
+    Transparent,
 }
 
 #[cfg(test)]
